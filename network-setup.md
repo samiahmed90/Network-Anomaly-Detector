@@ -124,8 +124,7 @@ inet 192.168.50.1/24
 
 ### Screenshot
 
-<!-- <img width="1570" height="1244" alt="Screenshot 2026-09-13 200856" src="https://github.com/user-attachments/assets/02a0bc03-b315-4ae7-953e-8e7892494579" />
- -->
+<img width="1570" height="1244" alt="Screenshot 2026-09-13 200856" src="https://github.com/user-attachments/assets/02a0bc03-b315-4ae7-953e-8e7892494579" />
 
 <br><br><br><br><br>
 
@@ -146,8 +145,7 @@ The Ubuntu Sensor VM (`192.168.50.1`) is therefore the Windows VM's default gate
 
 ### Screenshot
 
-<!-- <img width="1282" height="932" alt="image" src="https://github.com/user-attachments/assets/663e5ca2-69c8-4489-b293-c5f04dcd5514" />
- -->
+<img width="1282" height="932" alt="image" src="https://github.com/user-attachments/assets/663e5ca2-69c8-4489-b293-c5f04dcd5514" />
 
 <br><br><br><br><br>
 
@@ -169,8 +167,7 @@ This confirmed that the VirtualBox Internal Network was functioning correctly.
 
 ### Screenshot
 
-<!-- <img width="1282" height="932" alt="image" src="https://github.com/user-attachments/assets/92585a44-f0b9-4940-a207-18b3e836abb1" />
- -->
+<img width="1282" height="932" alt="image" src="https://github.com/user-attachments/assets/92585a44-f0b9-4940-a207-18b3e836abb1" />
 
 <br><br><br><br><br>
 
@@ -253,8 +250,7 @@ Windows → Ubuntu → Internet
 
 ### Screenshot
 
-<!-- <img width="1280" height="996" alt="image" src="https://github.com/user-attachments/assets/17fe2fb3-8c2f-4ea8-b80a-53e36ee84fe9" />
- -->
+<img width="1280" height="996" alt="image" src="https://github.com/user-attachments/assets/17fe2fb3-8c2f-4ea8-b80a-53e36ee84fe9" />
 
 <br><br><br><br><br>
 
@@ -288,8 +284,7 @@ This confirmed that both Internet connectivity and DNS resolution were working.
 
 ### Screenshot
 
-<!-- <img width="1280" height="996" alt="image" src="https://github.com/user-attachments/assets/9343fb72-82e5-43a0-9806-76270dfe3abf" />
- -->
+<img width="1280" height="996" alt="image" src="https://github.com/user-attachments/assets/9343fb72-82e5-43a0-9806-76270dfe3abf" />
 
 <br><br><br><br><br>
 
@@ -322,8 +317,7 @@ This confirmed that the Windows VM's Internet traffic passes through the Ubuntu 
 
 ### Screenshot
 
-<!-- <img width="1626" height="1364" alt="image" src="https://github.com/user-attachments/assets/e32aa73d-fdf0-4c59-b3ae-c00794151081" />
- -->
+<img width="1626" height="1364" alt="image" src="https://github.com/user-attachments/assets/e32aa73d-fdf0-4c59-b3ae-c00794151081" />
 
 <br><br><br><br><br>
 
