@@ -1,4 +1,5 @@
 from scapy.all import sniff, IP, TCP, UDP
+from scapy.layers.inet import IP_PROTOS
 from datetime import datetime
 
 
@@ -12,25 +13,30 @@ def process_packet(packet):
     dst_ip = packet[IP].dst
     packet_size = len(packet)
 
+    # Get protocol name automatically
+    protocol_number = packet[IP].proto
+    protocol = IP_PROTOS.get(
+        protocol_number,
+        f"Protocol-{protocol_number}"
+    )
+
+    # Get ports for TCP/UDP
     if TCP in packet:
-        protocol = "TCP"
         src_port = packet[TCP].sport
         dst_port = packet[TCP].dport
 
     elif UDP in packet:
-        protocol = "UDP"
         src_port = packet[UDP].sport
         dst_port = packet[UDP].dport
 
     else:
-        protocol = str(packet[IP].proto)
         src_port = "-"
         dst_port = "-"
 
     print(
         f"{timestamp} | "
         f"{src_ip} -> {dst_ip} | "
-        f"Protocol: {protocol} | "
+        f"Protocol: {protocol} ({protocol_number}) | "
         f"Src Port: {src_port} | "
         f"Dst Port: {dst_port} | "
         f"Size: {packet_size}"
