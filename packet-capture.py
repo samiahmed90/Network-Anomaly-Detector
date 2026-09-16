@@ -15,10 +15,10 @@ def process_packet(packet):
 
     # Get protocol name automatically
     protocol_number = packet[IP].proto
-    protocol = IP_PROTOS.get(
-        protocol_number,
-        f"Protocol-{protocol_number}"
-    )
+    try:
+        protocol = IP_PROTOS[protocol_number]
+    except KeyError:
+        protocol = f"Protocol-{protocol_number}"
 
     # Get ports for TCP/UDP
     if TCP in packet:
