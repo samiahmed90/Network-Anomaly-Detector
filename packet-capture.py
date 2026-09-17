@@ -1,6 +1,11 @@
 from scapy.all import sniff, IP, TCP, UDP
 from scapy.layers.inet import IP_PROTOS
 from datetime import datetime
+import sqlite3
+
+
+# Connect to SQLite database
+connection = sqlite3.connect("network.db")
 
 
 def process_packet(packet):
@@ -30,8 +35,30 @@ def process_packet(packet):
         dst_port = packet[UDP].dport
 
     else:
-        src_port = "-"
-        dst_port = "-"
+        src_port = None
+        dst_port = None
+
+    # Save packet to database
+    connection.execute(
+        """
+        INSERT INTO packets
+        (timestamp, src_ip, dst_ip, protocol, protocol_number,
+         src_port, dst_port, packet_size)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            timestamp,
+            src_ip,
+            dst_ip,
+            protocol,
+            protocol_number,
+            src_port,
+            dst_port,
+            packet_size
+        )
+    )
+
+    connection.commit()
 
     print(
         f"{timestamp} | "
@@ -43,4 +70,11 @@ def process_packet(packet):
     )
 
 
-sniff(iface="enp0s8", prn=process_packet)
+try:
+    sniff(iface="enp0s8", prn=process_packet)
+
+except KeyboardInterrupt:
+    print("\nCapture stopped.")
+
+finally:
+    connection.close()
