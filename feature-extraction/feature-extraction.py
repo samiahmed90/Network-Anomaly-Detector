@@ -35,3 +35,4 @@ print(f"UDP packets: {udp_count}")
 cursor.execute("SELECT COUNT(DISTINCT dst_ip) FROM packets")
 unique_destinations = cursor.fetchone()[0]
 print(f"Unique destinations: {unique_destinations}")
+
