@@ -29,3 +29,9 @@ print(f"TCP packets: {tcp_count}")
 cursor.execute("SELECT COUNT(*) FROM packets WHERE protocol = 'udp'")
 udp_count = cursor.fetchone()[0]
 print(f"UDP packets: {udp_count}")
+
+# Calculate the number of unique destination IP addresses
+
+cursor.execute("SELECT COUNT(DISTINCT dst_ip) FROM packets")
+unique_destinations = cursor.fetchone()[0]
+print(f"Unique destinations: {unique_destinations}")
