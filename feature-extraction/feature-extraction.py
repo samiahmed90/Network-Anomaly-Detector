@@ -39,4 +39,4 @@ print(f"Unique destinations: {unique_destinations}")
 # Calculate the number of uniquie destination ports
 cursor.execute("SELECT COUNT(DISTINCT dst_port) FROM packets")
 unique_ports = cursor.fetchone()[0]
-print(f"Unque ports: {unique_ports}")
+print(f"Unique ports: {unique_ports}")
