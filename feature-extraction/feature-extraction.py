@@ -20,3 +20,8 @@ cursor.execute("SELECT SUM(packet_size) FROM packets")
 total_bytes = cursor.fetchone()[0]
 
 print(f"Total bytes: {total_bytes}")
+
+# Calculate the total number of TCP packets captured
+cursor.execute("SELECT COUNT(*) FROM packets WHERE protocol = 'tcp'")
+tcp_count = cursor.fetchone()[0]
+print(f"TCP packets: {tcp_count}")
