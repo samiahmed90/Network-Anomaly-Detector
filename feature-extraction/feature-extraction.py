@@ -4,19 +4,6 @@ import sqlite3
 connection = sqlite3.connect("network.db")
 cursor = connection.cursor()
 
-# Count packets for each one-minute time window
-cursor.execute("""
-    SELECT strftime('%Y-%m-%d %H:%M', timestamp) AS minute,
-           COUNT(*) AS packet_count
-    FROM packets
-    GROUP BY minute
-    ORDER BY minute
-""")
-
-for minute, packet_count in cursor.fetchall():
-    print(f"{minute} | {packet_count} packets")
-
-
 # Calculate packets and total bytes for each one-minute time window
 cursor.execute("""
     SELECT strftime('%Y-%m-%d %H:%M', timestamp) AS minute,
@@ -33,7 +20,7 @@ for minute, packet_count, total_bytes in cursor.fetchall():
         f"Packets: {packet_count} | "
         f"Bytes: {total_bytes}"
     )
-    
+
 # Calculate the total number of TCP packets captured
 cursor.execute("SELECT COUNT(*) FROM packets WHERE protocol = 'tcp'")
 tcp_count = cursor.fetchone()[0]
