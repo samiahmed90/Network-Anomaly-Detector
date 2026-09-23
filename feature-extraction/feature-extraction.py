@@ -17,10 +17,22 @@ for minute, packet_count in cursor.fetchall():
     print(f"{minute} | {packet_count} packets")
 
 
-# Calculate the total amount of captured data in bytes
-cursor.execute("SELECT SUM(packet_size) FROM packets")
-total_bytes = cursor.fetchone()[0]
-print(f"Total bytes: {total_bytes}")
+# Calculate packets and total bytes for each one-minute time window
+cursor.execute("""
+    SELECT strftime('%Y-%m-%d %H:%M', timestamp) AS minute,
+           COUNT(*) AS packet_count,
+           SUM(packet_size) AS total_bytes
+    FROM packets
+    GROUP BY minute
+    ORDER BY minute
+""")
+
+for minute, packet_count, total_bytes in cursor.fetchall():
+    print(
+        f"{minute} | "
+        f"Packets: {packet_count} | "
+        f"Bytes: {total_bytes}"
+    )
 
 # Calculate the total number of TCP packets captured
 cursor.execute("SELECT COUNT(*) FROM packets WHERE protocol = 'tcp'")
