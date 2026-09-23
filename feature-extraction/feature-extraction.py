@@ -39,3 +39,18 @@ print(f"Unique ports: {unique_ports}")
 cursor.execute("SELECT AVG(packet_size) FROM packets")
 average_packet_size = cursor.fetchone()[0]
 print(f"Average packet size: {average_packet_size:.2f} bytes")
+
+# Calculate the packet capture duration
+cursor.execute("SELECT MIN(timestamp), MAX(timestamp) FROM packets")
+start_time, end_time = cursor.fetchone()
+
+# Calculate the duration in seconds
+cursor.execute(
+    "SELECT (julianday(?) - julianday(?)) * 86400",
+    (end_time, start_time)
+)
+duration = cursor.fetchone()[0]
+
+# Calculate packets per second
+packets_per_second = packet_count / duration
+print(f"Packets per second: {packets_per_second:.2f}")
