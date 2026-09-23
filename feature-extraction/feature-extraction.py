@@ -59,3 +59,10 @@ print(f"Packets per second: {packets_per_second:.2f}")
 cursor.execute("SELECT COUNT(*) FROM packets WHERE dst_port = 53")
 dns_count = cursor.fetchone()[0]
 print(f"DNS packets: {dns_count}")
+
+# Calculate the number of unique communication pairs
+cursor.execute(
+    "SELECT COUNT(DISTINCT src_ip || ' → ' || dst_ip) FROM packets"
+)
+unique_pairs = cursor.fetchone()[0]
+print(f"Unique communication pairs: {unique_pairs}")
