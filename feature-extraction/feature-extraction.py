@@ -4,10 +4,17 @@ import sqlite3
 connection = sqlite3.connect("network.db")
 cursor = connection.cursor()
 
-# Count the total number of captured packets
-cursor.execute("SELECT COUNT(*) FROM packets")
-packet_count = cursor.fetchone()[0]
-print(f"Total packets: {packet_count}")
+# Count packets for each one-minute time window
+cursor.execute("""
+    SELECT strftime('%Y-%m-%d %H:%M', timestamp) AS minute,
+           COUNT(*) AS packet_count
+    FROM packets
+    GROUP BY minute
+    ORDER BY minute
+""")
+
+for minute, packet_count in cursor.fetchall():
+    print(f"{minute} | {packet_count} packets")
 
 
 # Calculate the total amount of captured data in bytes
