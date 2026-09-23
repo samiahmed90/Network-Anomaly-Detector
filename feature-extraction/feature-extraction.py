@@ -33,7 +33,7 @@ for minute, packet_count, total_bytes in cursor.fetchall():
         f"Packets: {packet_count} | "
         f"Bytes: {total_bytes}"
     )
-
+    
 # Calculate the total number of TCP packets captured
 cursor.execute("SELECT COUNT(*) FROM packets WHERE protocol = 'tcp'")
 tcp_count = cursor.fetchone()[0]
