@@ -4,47 +4,26 @@ import sqlite3
 connection = sqlite3.connect("network.db")
 cursor = connection.cursor()
 
-# Calculate packets and total bytes for each one-minute time window
-cursor.execute("""
-    SELECT strftime('%Y-%m-%d %H:%M', timestamp) AS minute,
-           COUNT(*) AS packet_count,
-           SUM(packet_size) AS total_bytes
-    FROM packets
-    GROUP BY minute
-    ORDER BY minute
-""")
-
-for minute, packet_count, total_bytes in cursor.fetchall():
-    print(
-        f"{minute} | "
-        f"Packets: {packet_count} | "
-        f"Bytes: {total_bytes}"
-    )
-
-# Calculate packets, total bytes, and TCP packets for each one-minute time window
+# Calculate packets, bytes, TCP, and UDP for each one-minute time window
 cursor.execute("""
     SELECT strftime('%Y-%m-%d %H:%M', timestamp) AS minute,
            COUNT(*) AS packet_count,
            SUM(packet_size) AS total_bytes,
-           SUM(CASE WHEN protocol = 'tcp' THEN 1 ELSE 0 END) AS tcp_count
+           SUM(CASE WHEN protocol = 'tcp' THEN 1 ELSE 0 END) AS tcp_count,
+           SUM(CASE WHEN protocol = 'udp' THEN 1 ELSE 0 END) AS udp_count
     FROM packets
     GROUP BY minute
     ORDER BY minute
 """)
 
-for minute, packet_count, total_bytes, tcp_count in cursor.fetchall():
+for minute, packet_count, total_bytes, tcp_count, udp_count in cursor.fetchall():
     print(
         f"{minute} | "
         f"Packets: {packet_count} | "
         f"Bytes: {total_bytes} | "
-        f"TCP: {tcp_count}"
+        f"TCP: {tcp_count} | "
+        f"UDP: {udp_count}"
     )
-
-
-# Calculate the total number of UDP packets captured
-cursor.execute("SELECT COUNT(*) FROM packets WHERE protocol = 'udp'")
-udp_count = cursor.fetchone()[0]
-print(f"UDP packets: {udp_count}")
 
 # Calculate the number of unique destination IP addresses
 cursor.execute("SELECT COUNT(DISTINCT dst_ip) FROM packets")
