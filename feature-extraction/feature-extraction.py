@@ -48,7 +48,5 @@ cursor.execute(
 )
 duration = cursor.fetchone()[0]
 
-# Calculate packets per second
-packets_per_second = packet_count / duration
-print(f"Packets per second: {packets_per_second:.2f}")
+
 
