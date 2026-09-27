@@ -4,8 +4,7 @@ import sqlite3
 connection = sqlite3.connect("network.db")
 cursor = connection.cursor()
 
-# Calculate packets, bytes, TCP, UDP, and unique destinations
-# for each one-minute time window
+# Calculate network traffic features for each one-minute time window
 cursor.execute("""
     SELECT strftime('%Y-%m-%d %H:%M', timestamp) AS minute,
            COUNT(*) AS packet_count,
@@ -37,16 +36,7 @@ for minute, packet_count, total_bytes, average_packet_size, tcp_count, udp_count
 
 
 
-# Calculate the packet capture duration
-cursor.execute("SELECT MIN(timestamp), MAX(timestamp) FROM packets")
-start_time, end_time = cursor.fetchone()
 
-# Calculate the duration in seconds
-cursor.execute(
-    "SELECT (julianday(?) - julianday(?)) * 86400",
-    (end_time, start_time)
-)
-duration = cursor.fetchone()[0]
 
 
 
