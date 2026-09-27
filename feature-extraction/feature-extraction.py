@@ -10,6 +10,7 @@ cursor.execute("""
     SELECT strftime('%Y-%m-%d %H:%M', timestamp) AS minute,
            COUNT(*) AS packet_count,
            SUM(packet_size) AS total_bytes,
+           AVG(packet_size) AS average_packet_size,
            SUM(CASE WHEN protocol = 'tcp' THEN 1 ELSE 0 END) AS tcp_count,
            SUM(CASE WHEN protocol = 'udp' THEN 1 ELSE 0 END) AS udp_count,
            COUNT(DISTINCT dst_ip) AS unique_destinations,
@@ -18,11 +19,12 @@ cursor.execute("""
     GROUP BY minute
     ORDER BY minute
 """)
-for minute, packet_count, total_bytes, tcp_count, udp_count, unique_destinations, unique_ports in cursor.fetchall():
+for minute, packet_count, total_bytes, average_packet_size, tcp_count, udp_count, unique_destinations, unique_ports in cursor.fetchall():
     print(
     f"{minute} | "
     f"Packets: {packet_count} | "
     f"Bytes: {total_bytes} | "
+    f"Avg packet size: {average_packet_size:.2f} | "
     f"TCP: {tcp_count} | "
     f"UDP: {udp_count} | "
     f"Unique destinations: {unique_destinations} | "
