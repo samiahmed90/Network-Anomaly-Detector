@@ -12,7 +12,7 @@ cursor.execute("""
            SUM(packet_size) AS total_bytes,
            SUM(CASE WHEN protocol = 'tcp' THEN 1 ELSE 0 END) AS tcp_count,
            SUM(CASE WHEN protocol = 'udp' THEN 1 ELSE 0 END) AS udp_count,
-           COUNT(DISTINCT dst_ip) AS unique_destinations
+           COUNT(DISTINCT dst_ip) AS unique_destinations,
            COUNT(DISTINCT dst_port) AS unique_ports
     FROM packets
     GROUP BY minute
