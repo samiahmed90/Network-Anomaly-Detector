@@ -32,10 +32,7 @@ for minute, packet_count, total_bytes, average_packet_size, tcp_count, udp_count
     
 )
 
-# Calculate the average packet size
-cursor.execute("SELECT AVG(packet_size) FROM packets")
-average_packet_size = cursor.fetchone()[0]
-print(f"Average packet size: {average_packet_size:.2f} bytes")
+
 
 # Calculate the packet capture duration
 cursor.execute("SELECT MIN(timestamp), MAX(timestamp) FROM packets")
