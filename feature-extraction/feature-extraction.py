@@ -51,11 +51,6 @@ duration = cursor.fetchone()[0]
 packets_per_second = packet_count / duration
 print(f"Packets per second: {packets_per_second:.2f}")
 
-# Calculate the number of DNS packets
-cursor.execute("SELECT COUNT(*) FROM packets WHERE dst_port = 53")
-dns_count = cursor.fetchone()[0]
-print(f"DNS packets: {dns_count}")
-
 # Calculate the number of unique communication pairs
 cursor.execute(
     "SELECT COUNT(DISTINCT src_ip || ' → ' || dst_ip) FROM packets"
