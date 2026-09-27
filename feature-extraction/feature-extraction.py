@@ -27,11 +27,6 @@ for minute, packet_count, total_bytes, tcp_count, udp_count, unique_destinations
     f"Unique destinations: {unique_destinations}"
 )
 
-# Calculate the number of unique destination IP addresses
-cursor.execute("SELECT COUNT(DISTINCT dst_ip) FROM packets")
-unique_destinations = cursor.fetchone()[0]
-print(f"Unique destinations: {unique_destinations}")
-
 # Calculate the number of uniquie destination ports
 cursor.execute("SELECT COUNT(DISTINCT dst_port) FROM packets")
 unique_ports = cursor.fetchone()[0]
