@@ -14,12 +14,13 @@ cursor.execute("""
            SUM(CASE WHEN protocol = 'tcp' THEN 1 ELSE 0 END) AS tcp_count,
            SUM(CASE WHEN protocol = 'udp' THEN 1 ELSE 0 END) AS udp_count,
            COUNT(DISTINCT dst_ip) AS unique_destinations,
-           COUNT(DISTINCT dst_port) AS unique_ports
+           COUNT(DISTINCT dst_port) AS unique_ports,
+           SUM(CASE WHEN dst_port = 53 THEN 1 else 0 END) AS dns_count    
     FROM packets
     GROUP BY minute
     ORDER BY minute
 """)
-for minute, packet_count, total_bytes, average_packet_size, tcp_count, udp_count, unique_destinations, unique_ports in cursor.fetchall():
+for minute, packet_count, total_bytes, average_packet_size, tcp_count, udp_count, unique_destinations, unique_ports, dns_count in cursor.fetchall():
     print(
     f"{minute} | "
     f"Packets: {packet_count} | "
@@ -28,7 +29,8 @@ for minute, packet_count, total_bytes, average_packet_size, tcp_count, udp_count
     f"TCP: {tcp_count} | "
     f"UDP: {udp_count} | "
     f"Unique destinations: {unique_destinations} | "
-    f"Unique ports: {unique_ports}"
+    f"Unique ports: {unique_ports} | "
+    f"DNS: {dns_count}"
     
 )
 
