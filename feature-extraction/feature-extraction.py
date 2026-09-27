@@ -13,24 +13,22 @@ cursor.execute("""
            SUM(CASE WHEN protocol = 'tcp' THEN 1 ELSE 0 END) AS tcp_count,
            SUM(CASE WHEN protocol = 'udp' THEN 1 ELSE 0 END) AS udp_count,
            COUNT(DISTINCT dst_ip) AS unique_destinations
+           COUNT(DISTINCT dst_port) AS unique_ports
     FROM packets
     GROUP BY minute
     ORDER BY minute
 """)
-for minute, packet_count, total_bytes, tcp_count, udp_count, unique_destinations in cursor.fetchall():
+for minute, packet_count, total_bytes, tcp_count, udp_count, unique_destinations, unique_ports in cursor.fetchall():
     print(
     f"{minute} | "
     f"Packets: {packet_count} | "
     f"Bytes: {total_bytes} | "
     f"TCP: {tcp_count} | "
     f"UDP: {udp_count} | "
-    f"Unique destinations: {unique_destinations}"
+    f"Unique destinations: {unique_destinations} | "
+    f"Unique ports: {unique_ports}"
+    
 )
-
-# Calculate the number of uniquie destination ports
-cursor.execute("SELECT COUNT(DISTINCT dst_port) FROM packets")
-unique_ports = cursor.fetchone()[0]
-print(f"Unique ports: {unique_ports}")
 
 # Calculate the average packet size
 cursor.execute("SELECT AVG(packet_size) FROM packets")
