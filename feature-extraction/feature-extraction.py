@@ -21,22 +21,45 @@ cursor.execute("""
     ORDER BY minute
 """)
 for minute, packet_count, total_bytes, average_packet_size, tcp_count, udp_count, unique_destinations, unique_ports, dns_count, unique_communication_pairs in cursor.fetchall():
+
+    cursor.execute("""
+        INSERT INTO traffic_features (
+            minute,
+            packet_count,
+            total_bytes,
+            average_packet_size,
+            tcp_count,
+            udp_count,
+            unique_destinations,
+            unique_ports,
+            dns_count,
+            unique_communication_pairs
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        minute,
+        packet_count,
+        total_bytes,
+        average_packet_size,
+        tcp_count,
+        udp_count,
+        unique_destinations,
+        unique_ports,
+        dns_count,
+        unique_communication_pairs
+    ))
+
     print(
-    f"{minute} | "
-    f"Packets: {packet_count} | "
-    f"Bytes: {total_bytes} | "
-    f"Avg packet size: {average_packet_size:.2f} | "
-    f"TCP: {tcp_count} | "
-    f"UDP: {udp_count} | "
-    f"Unique destinations: {unique_destinations} | "
-    f"Unique ports: {unique_ports} | "
-    f"DNS: {dns_count} | "
-    f"Communication pairs: {unique_communication_pairs}"
-)
+        f"{minute} | "
+        f"Packets: {packet_count} | "
+        f"Bytes: {total_bytes} | "
+        f"Avg packet size: {average_packet_size:.2f} | "
+        f"TCP: {tcp_count} | "
+        f"UDP: {udp_count} | "
+        f"Unique destinations: {unique_destinations} | "
+        f"Unique ports: {unique_ports} | "
+        f"DNS: {dns_count} | "
+        f"Communication pairs: {unique_communication_pairs}"
+    )
 
-
-
-
-
-
-
+connection.commit()
