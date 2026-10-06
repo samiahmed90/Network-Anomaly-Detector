@@ -23,7 +23,7 @@ cursor.execute("""
 for minute, packet_count, total_bytes, average_packet_size, tcp_count, udp_count, unique_destinations, unique_ports, dns_count, unique_communication_pairs in cursor.fetchall():
 
     cursor.execute("""
-        INSERT INTO traffic_features (
+        INSERT OR REPLACE INTO traffic_features (
             minute,
             packet_count,
             total_bytes,
