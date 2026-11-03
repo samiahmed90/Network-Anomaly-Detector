@@ -2,86 +2,153 @@
 # ============================================================
 # Live Feature Extraction
 # ============================================================
-# This script processes completed one-minute packet windows
-# and stores device-specific traffic features in SQLite.
+# Processes completed one-minute packet windows and stores
+# device-specific traffic features in SQLite.
+#
+# Supports multiple monitored LAN devices.
 # ============================================================
 
 # Import SQLite for database operations.
 import sqlite3
 
-# Import time so the script can run continuously.
+# Import time for continuous execution.
 import time
 
-# Import datetime to identify completed one-minute windows.
-from datetime import datetime, timedelta
+# Import datetime for minute-based processing.
+from datetime import datetime
 
-# Import Path to locate the database reliably.
+# Import Path to locate the database.
 from pathlib import Path
 
 
 # ------------------------------------------------------------
-# 1. Database configuration
+# 1. Database and monitoring configuration
 # ------------------------------------------------------------
 
-# Locate the project directory (the parent of this folder).
+# Locate the main project directory.
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
-# Build the absolute path to the existing database.
+# Use the existing project database.
 DATABASE_PATH = PROJECT_DIR / "network.db"
 
-# Set how often the script checks for completed minutes.
+# Check for new completed minutes every 10 seconds.
 CHECK_INTERVAL = 10
+
+# Devices currently monitored by the system.
+# Add more LAN device IP addresses here in the future.
+MONITORED_DEVICES = [
+    "192.168.50.10"
+]
 
 
 # ------------------------------------------------------------
-# 2. Extract features for completed minutes
+# 2. Extract missing completed minute records
 # ------------------------------------------------------------
 
 def extract_completed_minutes():
 
-    # Open a connection to the existing database.
     connection = sqlite3.connect(DATABASE_PATH)
 
     try:
         cursor = connection.cursor()
 
-        # Determine the beginning of the current minute.
+        # Identify the beginning of the current minute.
         current_minute = datetime.now().replace(
             second=0,
             microsecond=0
         )
 
         # Only process minutes that have fully ended.
-        completed_minute = (
-            current_minute - timedelta(minutes=1)
-        ).strftime("%Y-%m-%d %H:%M")
+        completed_boundary = current_minute.strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
-        # Calculate traffic features separately for each source IP.
-        cursor.execute("""
+        # Create placeholders for monitored device IPs.
+        if not MONITORED_DEVICES:
+            print("No devices configured for monitoring.")
+            return
+
+        placeholders = ",".join(
+            "?" for _ in MONITORED_DEVICES
+        )
+
+        # Find completed minute/device combinations
+        # that do not yet have a feature record.
+        query = f"""
             SELECT
-                strftime('%Y-%m-%d %H:%M', timestamp) AS minute,
-                src_ip AS device_ip,
-                COUNT(*) AS packet_count,
-                SUM(packet_size) AS total_bytes,
-                AVG(packet_size) AS average_packet_size,
-                SUM(CASE WHEN LOWER(protocol) = 'tcp' THEN 1 ELSE 0 END),
-                SUM(CASE WHEN LOWER(protocol) = 'udp' THEN 1 ELSE 0 END),
-                COUNT(DISTINCT dst_ip) AS unique_destinations,
-                COUNT(DISTINCT dst_port) AS unique_ports,
-                SUM(CASE WHEN dst_port = 53 THEN 1 ELSE 0 END)
-            FROM packets
-            WHERE timestamp >= ?
-              AND timestamp < ?
-            GROUP BY minute, device_ip
-        """, (
-            completed_minute,
-            current_minute.strftime("%Y-%m-%d %H:%M:%S")
-        ))
+                strftime(
+                    '%Y-%m-%d %H:%M',
+                    p.timestamp
+                ) AS minute,
 
-        # Retrieve the calculated results.
+                p.src_ip AS device_ip,
+
+                COUNT(*) AS packet_count,
+
+                SUM(p.packet_size) AS total_bytes,
+
+                AVG(p.packet_size) AS average_packet_size,
+
+                SUM(
+                    CASE
+                        WHEN LOWER(p.protocol) = 'tcp'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS tcp_count,
+
+                SUM(
+                    CASE
+                        WHEN LOWER(p.protocol) = 'udp'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS udp_count,
+
+                COUNT(DISTINCT p.dst_ip)
+                    AS unique_destinations,
+
+                COUNT(DISTINCT p.dst_port)
+                    AS unique_ports,
+
+                SUM(
+                    CASE
+                        WHEN p.src_port = 53
+                          OR p.dst_port = 53
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS dns_count
+
+            FROM packets p
+
+            WHERE p.timestamp < ?
+              AND p.src_ip IN ({placeholders})
+
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM device_traffic_features f
+                  WHERE f.minute = strftime(
+                      '%Y-%m-%d %H:%M',
+                      p.timestamp
+                  )
+                  AND f.device_ip = p.src_ip
+              )
+
+            GROUP BY minute, device_ip
+
+            ORDER BY minute, device_ip
+        """
+
+        cursor.execute(
+            query,
+            [completed_boundary] + MONITORED_DEVICES
+        )
+
         feature_records = cursor.fetchall()
 
-        # Insert or update the device-specific feature records.
+        # Insert new feature records without replacing
+        # existing historical records.
         for record in feature_records:
 
             cursor.execute("""
@@ -100,34 +167,28 @@ def extract_completed_minutes():
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 
                 ON CONFLICT(minute, device_ip)
-                DO UPDATE SET
-                    packet_count = excluded.packet_count,
-                    total_bytes = excluded.total_bytes,
-                    average_packet_size = excluded.average_packet_size,
-                    tcp_count = excluded.tcp_count,
-                    udp_count = excluded.udp_count,
-                    unique_destinations = excluded.unique_destinations,
-                    unique_ports = excluded.unique_ports,
-                    dns_count = excluded.dns_count
+                DO NOTHING
             """, record)
 
             print(
-                f"Processed {record[0]} | "
+                f"Processed: {record[0]} | "
                 f"Device: {record[1]} | "
                 f"Packets: {record[2]} | "
-                f"Bytes: {record[3]}"
+                f"Bytes: {record[3]} | "
+                f"DNS: {record[9]}"
             )
 
-        # Save all feature records.
+        # Save new feature records.
         connection.commit()
 
         if not feature_records:
-            print(
-                f"No packets found for {completed_minute}"
-            )
+            print("No missing completed feature windows.")
+
+    except sqlite3.Error as error:
+        connection.rollback()
+        print(f"Database error: {error}")
 
     finally:
-        # Always close the database connection.
         connection.close()
 
 
@@ -137,18 +198,25 @@ def extract_completed_minutes():
 
 if __name__ == "__main__":
 
-    print("Live feature extraction started.")
+    print("=" * 55)
+    print("LIVE FEATURE EXTRACTION STARTED")
+    print("=" * 55)
+
     print(f"Database: {DATABASE_PATH}")
-    print(f"Checking every {CHECK_INTERVAL} seconds.")
+    print(f"Monitored devices: {MONITORED_DEVICES}")
+    print(f"Check interval: {CHECK_INTERVAL} seconds")
+
     print("Press Ctrl+C to stop.")
+    print("=" * 55)
 
     try:
         while True:
 
             extract_completed_minutes()
 
-            # Wait before checking again.
             time.sleep(CHECK_INTERVAL)
 
     except KeyboardInterrupt:
+
         print("\nLive feature extraction stopped.")
+
