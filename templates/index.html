@@ -198,69 +198,119 @@
 
 <!-- Configure and display the network traffic chart. -->
 <script>
-    // Retrieve the historical chart data passed from Flask.
-    const chartLabels = {{ chart_data.labels | tojson }};
-    const packetCounts = {{ chart_data.packets | tojson }};
+    
+// Retrieve the initial chart data passed from Flask.
+const chartLabels = {{ chart_data.labels | tojson }};
+const packetCounts = {{ chart_data.packets | tojson }};
 
-    // Find the canvas element where the chart will appear.
-    const chartCanvas = document.getElementById("trafficChart");
+// Find the canvas where the chart will appear.
+const chartCanvas = document.getElementById("trafficChart");
 
-    // Create the packet activity line chart.
-    new Chart(chartCanvas, {
-        type: "line",
+// Create the traffic chart and save it in a variable.
+const trafficChart = new Chart(chartCanvas, {
+    type: "line",
 
-        // Supply timestamps and packet counts.
-        data: {
-            labels: chartLabels,
-            datasets: [{
-                label: "Packets per Minute",
-                data: packetCounts,
-                borderWidth: 2,
-                tension: 0.3,
-                fill: false
-            }]
-        },
+    // Supply the initial timestamps and packet counts.
+    data: {
+        labels: chartLabels,
+        datasets: [{
+            label: "Packets per Minute",
+            data: packetCounts,
+            borderWidth: 2,
+            tension: 0.3,
+            fill: false
+        }]
+    },
 
-        // Configure the chart appearance and axes.
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
+    // Configure the chart appearance.
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
 
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: "Recorded Time",
-                        color: "#9ca3af"
-                    },
-                    ticks: {
-                        color: "#9ca3af",
-                        maxTicksLimit: 10
-                    }
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: "Recorded Time",
+                    color: "#9ca3af"
                 },
-
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: "Packet Count",
-                        color: "#9ca3af"
-                    },
-                    ticks: {
-                        color: "#9ca3af"
-                    }
+                ticks: {
+                    color: "#9ca3af",
+                    maxTicksLimit: 10
                 }
             },
 
-            plugins: {
-                legend: {
-                    labels: {
-                        color: "#f9fafb"
-                    }
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: "Packet Count",
+                    color: "#9ca3af"
+                },
+                ticks: {
+                    color: "#9ca3af"
+                }
+            }
+        },
+
+        plugins: {
+            legend: {
+                labels: {
+                    color: "#f9fafb"
                 }
             }
         }
-    });
+    }
+});
+
+
+// Fetch updated dashboard information from Flask.
+async function updateDashboard() {
+
+    try {
+        // Request the latest information from the Flask API.
+        const response = await fetch("/api/dashboard-data");
+
+        // Stop if the server returned an unsuccessful response.
+        if (!response.ok) {
+            throw new Error("Could not retrieve dashboard data.");
+        }
+
+        // Convert the response into JavaScript data.
+        const data = await response.json();
+
+        // Update the summary cards.
+        document.querySelector(".stats-grid .card:nth-child(1) p").textContent =
+            data.stats.monitored_devices;
+
+        document.querySelector(".stats-grid .card:nth-child(2) p").textContent =
+            data.stats.total_packets.toLocaleString();
+
+        document.querySelector(".stats-grid .card:nth-child(3) p").textContent =
+            data.stats.total_mb + " MB";
+
+        document.querySelector(".stats-grid .card:nth-child(4) p").textContent =
+            data.stats.detected_anomalies;
+
+        // Update the traffic chart with the latest database records.
+        trafficChart.data.labels = data.chart_data.labels;
+        trafficChart.data.datasets[0].data = data.chart_data.packets;
+
+        // Redraw the chart.
+        trafficChart.update();
+
+        // Display the successful update time in the browser console.
+        console.log("Dashboard updated:", new Date().toLocaleTimeString());
+
+    } catch (error) {
+        // Display errors without stopping the dashboard.
+        console.error("Dashboard update failed:", error);
+    }
+}
+
+
+// Check for updated database information every 10 seconds.
+setInterval(updateDashboard, 10000);
 </script>
 
 </body>

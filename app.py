@@ -1,6 +1,6 @@
 
-# Import Flask to create our web application.
-from flask import Flask, render_template
+# Import Flask tools, including jsonify for returning JSON data.
+from flask import Flask, render_template, jsonify
 
 # Import SQLite to read the project's database.
 import sqlite3
@@ -128,6 +128,23 @@ def home():
         stats=stats,
         chart_data=chart_data
     )
+
+# Provide updated dashboard statistics and chart data as JSON.
+@app.route("/api/dashboard-data")
+def dashboard_data():
+
+    # Retrieve the latest statistics from SQLite.
+    stats = get_dashboard_stats()
+
+    # Retrieve the latest traffic chart data from SQLite.
+    chart_data = get_traffic_chart_data()
+
+    # Return both datasets as JSON for the browser.
+    return jsonify({
+        "stats": stats,
+        "chart_data": chart_data
+    })
+
 
 
 
