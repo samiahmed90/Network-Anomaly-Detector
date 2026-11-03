@@ -71,15 +71,64 @@ def get_dashboard_stats():
         connection.close()
 
 
+# Retrieve packet counts over time for the monitored Windows VM.
+def get_traffic_chart_data():
+
+    # Open the existing SQLite database in read-only mode.
+    connection = sqlite3.connect(
+        f"file:{DATABASE_PATH}?mode=ro",
+        uri=True
+    )
+
+    try:
+        # Create a cursor for executing SQL queries.
+        cursor = connection.cursor()
+
+        # Retrieve packet counts in chronological order.
+        cursor.execute("""
+            SELECT
+                minute,
+                packet_count
+            FROM device_traffic_features
+            WHERE device_ip = ?
+            ORDER BY minute ASC
+        """, (MONITORED_DEVICE_IP,))
+
+        # Fetch all matching traffic records.
+        records = cursor.fetchall()
+
+        # Separate timestamps and packet counts for the chart.
+        chart_data = {
+            "labels": [row[0] for row in records],
+            "packets": [row[1] for row in records]
+        }
+
+        # Return the chart data to the dashboard.
+        return chart_data
+
+    finally:
+        # Close the database connection.
+        connection.close()
+
+
+
 # Define the dashboard homepage.
 @app.route("/")
 def home():
 
-    # Retrieve the latest available statistics from SQLite.
+    # Retrieve the dashboard summary statistics.
     stats = get_dashboard_stats()
 
-    # Display the dashboard and pass it the statistics.
-    return render_template("index.html", stats=stats)
+    # Retrieve packet activity for the traffic chart.
+    chart_data = get_traffic_chart_data()
+
+    # Render the dashboard with both sets of data.
+    return render_template(
+        "index.html",
+        stats=stats,
+        chart_data=chart_data
+    )
+
 
 
 # Start the Flask development server.

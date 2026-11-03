@@ -100,6 +100,9 @@
             overflow-x: auto;
         }
     </style>
+    <!-- Load Chart.js to create interactive traffic charts. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 
 <body>
@@ -162,6 +165,15 @@
                 </table>
             </div>
         </div>
+        
+        <!-- Display packet activity over time. -->
+        <div class="panel">
+            <h2>Network Traffic Over Time</h2>
+
+            <!-- Canvas where Chart.js will draw the traffic chart. -->
+            <canvas id="trafficChart"></canvas>
+        </div>
+
 
         <!-- Display additional traffic protocol statistics. -->
         <div class="panel">
@@ -183,5 +195,73 @@
         </div>
 
     </div>
+
+<!-- Configure and display the network traffic chart. -->
+<script>
+    // Retrieve the historical chart data passed from Flask.
+    const chartLabels = {{ chart_data.labels | tojson }};
+    const packetCounts = {{ chart_data.packets | tojson }};
+
+    // Find the canvas element where the chart will appear.
+    const chartCanvas = document.getElementById("trafficChart");
+
+    // Create the packet activity line chart.
+    new Chart(chartCanvas, {
+        type: "line",
+
+        // Supply timestamps and packet counts.
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: "Packets per Minute",
+                data: packetCounts,
+                borderWidth: 2,
+                tension: 0.3,
+                fill: false
+            }]
+        },
+
+        // Configure the chart appearance and axes.
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: "Recorded Time",
+                        color: "#9ca3af"
+                    },
+                    ticks: {
+                        color: "#9ca3af",++
+                        maxTicksLimit: 10
+                    }
+                },
+
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: "Packet Count",
+                        color: "#9ca3af"
+                    },
+                    ticks: {
+                        color: "#9ca3af"
+                    }
+                }
+            },
+
+            plugins: {
+                legend: {
+                    labels: {
+                        color: "#f9fafb"
+                    }
+                }
+            }
+        }
+    });
+</script>
+
 </body>
 </html>
