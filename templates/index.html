@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,7 +98,50 @@
         .table-wrapper {
             overflow-x: auto;
         }
+
+        /* Arrange recent anomaly alerts vertically. */
+        .anomaly-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Style each potential anomaly alert. */
+        .anomaly-alert {
+            background: #374151;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        /* Highlight the anomaly alert heading. */
+        .anomaly-alert h3 {
+            color: #fbbf24;
+            font-size: 16px;
+            margin: 0 0 10px;
+        }
+
+        /* Style the information inside each alert. */
+        .anomaly-alert p {
+            color: #d1d5db;
+            font-size: 14px;
+            margin: 6px 0;
+        }
+
+        /* Style the message displayed when there are no alerts. */
+        .no-anomalies {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        /* Explain that model alerts require investigation. */
+        .alert-note {
+            color: #9ca3af;
+            font-size: 13px;
+            margin-top: 15px;
+        }
     </style>
+
     <!-- Load Chart.js to create interactive traffic charts. -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -165,7 +207,7 @@
                 </table>
             </div>
         </div>
-        
+
         <!-- Display packet activity over time. -->
         <div class="panel">
             <h2>Network Traffic Over Time</h2>
@@ -173,7 +215,6 @@
             <!-- Canvas where Chart.js will draw the traffic chart. -->
             <canvas id="trafficChart"></canvas>
         </div>
-
 
         <!-- Display additional traffic protocol statistics. -->
         <div class="panel">
@@ -184,134 +225,229 @@
             <p>DNS Packets: {{ "{:,}".format(stats.dns_packets) }}</p>
         </div>
 
-        <!-- Reserve this section for future machine-learning alerts. -->
+        <!-- Display potential anomalies identified by the ML model. -->
         <div class="panel">
             <h2>Recent Anomaly Alerts</h2>
-            <p>No anomaly alerts are connected yet.</p>
-            <p>
-                Machine-learning predictions will be displayed here
-                in a later development step.
+
+            <!-- JavaScript will populate this container with anomaly records. -->
+            <div id="anomaly-alerts" class="anomaly-list" aria-live="polite">
+                <p class="no-anomalies">Loading anomaly alerts...</p>
+            </div>
+
+            <!-- Explain the meaning of the model's alerts. -->
+            <p class="alert-note">
+                These alerts represent potential anomalies identified by
+                the Isolation Forest model. They do not necessarily indicate
+                malicious activity and should be investigated.
             </p>
         </div>
 
     </div>
 
-<!-- Configure and display the network traffic chart. -->
-<script>
-    
-// Retrieve the initial chart data passed from Flask.
-const chartLabels = {{ chart_data.labels | tojson }};
-const packetCounts = {{ chart_data.packets | tojson }};
 
-// Find the canvas where the chart will appear.
-const chartCanvas = document.getElementById("trafficChart");
+    <!-- Configure and display the network traffic chart and anomaly alerts. -->
+    <script>
 
-// Create the traffic chart and save it in a variable.
-const trafficChart = new Chart(chartCanvas, {
-    type: "line",
+    // Retrieve the initial chart data passed from Flask.
+    const chartLabels = {{ chart_data.labels | tojson }};
+    const packetCounts = {{ chart_data.packets | tojson }};
 
-    // Supply the initial timestamps and packet counts.
-    data: {
-        labels: chartLabels,
-        datasets: [{
-            label: "Packets per Minute",
-            data: packetCounts,
-            borderWidth: 2,
-            tension: 0.3,
-            fill: false
-        }]
-    },
+    // Retrieve the initial anomaly records passed from Flask.
+    const initialAnomalies = {{ recent_anomalies | tojson }};
 
-    // Configure the chart appearance.
-    options: {
-        responsive: true,
-        maintainAspectRatio: true,
+    // Find the canvas where the chart will appear.
+    const chartCanvas = document.getElementById("trafficChart");
 
-        scales: {
-            x: {
-                title: {
-                    display: true,
-                    text: "Recorded Time",
-                    color: "#9ca3af"
+    // Create the traffic chart and save it in a variable.
+    const trafficChart = new Chart(chartCanvas, {
+        type: "line",
+
+        // Supply the initial timestamps and packet counts.
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: "Packets per Minute",
+                data: packetCounts,
+                borderWidth: 2,
+                tension: 0.3,
+                fill: false
+            }]
+        },
+
+        // Configure the chart appearance.
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: "Recorded Time",
+                        color: "#9ca3af"
+                    },
+                    ticks: {
+                        color: "#9ca3af",
+                        maxTicksLimit: 10
+                    }
                 },
-                ticks: {
-                    color: "#9ca3af",
-                    maxTicksLimit: 10
+
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: "Packet Count",
+                        color: "#9ca3af"
+                    },
+                    ticks: {
+                        color: "#9ca3af"
+                    }
                 }
             },
 
-            y: {
-                beginAtZero: true,
-                title: {
-                    display: true,
-                    text: "Packet Count",
-                    color: "#9ca3af"
-                },
-                ticks: {
-                    color: "#9ca3af"
-                }
-            }
-        },
-
-        plugins: {
-            legend: {
-                labels: {
-                    color: "#f9fafb"
+            plugins: {
+                legend: {
+                    labels: {
+                        color: "#f9fafb"
+                    }
                 }
             }
         }
-    }
-});
+    });
 
 
-// Fetch updated dashboard information from Flask.
-async function updateDashboard() {
+    // ========================================================
+    // Display recent anomaly alerts
+    // ========================================================
 
-    try {
-        // Request the latest information from the Flask API.
-        const response = await fetch("/api/dashboard-data");
+    function renderAnomalyAlerts(anomalies) {
 
-        // Stop if the server returned an unsuccessful response.
-        if (!response.ok) {
-            throw new Error("Could not retrieve dashboard data.");
+        // Find the container where anomaly alerts will appear.
+        const alertContainer = document.getElementById("anomaly-alerts");
+
+        // Clear the previous alert information.
+        alertContainer.replaceChildren();
+
+        // Check whether the model has detected any anomalies.
+        if (!anomalies || anomalies.length === 0) {
+
+            // Create a message indicating that no anomalies were found.
+            const message = document.createElement("p");
+
+            message.className = "no-anomalies";
+            message.textContent = "No potential anomalies detected.";
+
+            // Display the message inside the alert container.
+            alertContainer.appendChild(message);
+
+            return;
         }
 
-        // Convert the response into JavaScript data.
-        const data = await response.json();
+        // Create an alert card for each detected anomaly.
+        anomalies.forEach((anomaly, index) => {
 
-        // Update the summary cards.
-        document.querySelector(".stats-grid .card:nth-child(1) p").textContent =
-            data.stats.monitored_devices;
+            // Create the alert card.
+            const alertCard = document.createElement("div");
 
-        document.querySelector(".stats-grid .card:nth-child(2) p").textContent =
-            data.stats.total_packets.toLocaleString();
+            alertCard.className = "anomaly-alert";
 
-        document.querySelector(".stats-grid .card:nth-child(3) p").textContent =
-            data.stats.total_mb + " MB";
+            // Create the alert heading.
+            const heading = document.createElement("h3");
 
-        document.querySelector(".stats-grid .card:nth-child(4) p").textContent =
-            data.stats.detected_anomalies;
+            heading.textContent = "Potential Anomaly #" + (index + 1);
 
-        // Update the traffic chart with the latest database records.
-        trafficChart.data.labels = data.chart_data.labels;
-        trafficChart.data.datasets[0].data = data.chart_data.packets;
+            // Create the timestamp information.
+            const timestamp = document.createElement("p");
 
-        // Redraw the chart.
-        trafficChart.update();
+            timestamp.textContent = "Timestamp: " + anomaly.minute;
 
-        // Display the successful update time in the browser console.
-        console.log("Dashboard updated:", new Date().toLocaleTimeString());
+            // Create the device IP information.
+            const device = document.createElement("p");
 
-    } catch (error) {
-        // Display errors without stopping the dashboard.
-        console.error("Dashboard update failed:", error);
+            device.textContent = "Device IP: " + anomaly.device_ip;
+
+            // Create the anomaly score information.
+            const score = document.createElement("p");
+
+            score.textContent =
+                "Anomaly Score: " + Number(anomaly.anomaly_score).toFixed(6);
+
+            // Add all alert information to the alert card.
+            alertCard.appendChild(heading);
+            alertCard.appendChild(timestamp);
+            alertCard.appendChild(device);
+            alertCard.appendChild(score);
+
+            // Display the alert card.
+            alertContainer.appendChild(alertCard);
+        });
     }
-}
 
 
-// Check for updated database information every 10 seconds.
-setInterval(updateDashboard, 10000);
-</script>
+    // Display the initial anomaly records when the page loads.
+    renderAnomalyAlerts(initialAnomalies);
+
+
+    // ========================================================
+    // Update dashboard information from the Flask API
+    // ========================================================
+
+    async function updateDashboard() {
+
+        try {
+            // Request the latest information from the Flask API.
+            const response = await fetch("/api/dashboard-data");
+
+            // Stop if the server returned an unsuccessful response.
+            if (!response.ok) {
+                throw new Error("Could not retrieve dashboard data.");
+            }
+
+            // Convert the response into JavaScript data.
+            const data = await response.json();
+
+            // Update the summary cards.
+            document.querySelector(
+                ".stats-grid .card:nth-child(1) p"
+            ).textContent = data.stats.monitored_devices;
+
+            document.querySelector(
+                ".stats-grid .card:nth-child(2) p"
+            ).textContent = data.stats.total_packets.toLocaleString();
+
+            document.querySelector(
+                ".stats-grid .card:nth-child(3) p"
+            ).textContent = data.stats.total_mb + " MB";
+
+            document.querySelector(
+                ".stats-grid .card:nth-child(4) p"
+            ).textContent = data.stats.detected_anomalies;
+
+            // Update the traffic chart with the latest database records.
+            trafficChart.data.labels = data.chart_data.labels;
+            trafficChart.data.datasets[0].data = data.chart_data.packets;
+
+            // Redraw the chart.
+            trafficChart.update();
+
+            // Update the recent anomaly alerts.
+            renderAnomalyAlerts(data.recent_anomalies);
+
+            // Display the successful update time in the browser console.
+            console.log("Dashboard updated:", new Date().toLocaleTimeString());
+
+        } catch (error) {
+
+            // Display errors without stopping the dashboard.
+            console.error("Dashboard update failed:", error);
+        }
+    }
+
+
+    // Check for updated database information every 10 seconds.
+    setInterval(updateDashboard, 10000);
+
+    </script>
 
 </body>
 </html>
