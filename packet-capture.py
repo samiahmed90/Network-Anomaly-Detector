@@ -71,7 +71,8 @@ def process_packet(packet):
 
 
 try:
-    sniff(iface="enp0s8", prn=process_packet)
+    # Capture packets from both sides of the Ubuntu sensor.
+    sniff(iface=["enp0s8", "enp0s9"], prn=process_packet)
 
 except KeyboardInterrupt:
     print("\nCapture stopped.")
