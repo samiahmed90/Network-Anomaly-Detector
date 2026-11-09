@@ -18,6 +18,9 @@ import pandas as pd
 # Import joblib for loading the trained Isolation Forest model.
 import joblib
 
+# Import the Telegram notification function.
+from alerts import send_telegram_alert
+
 
 # ============================================================
 # Step 1: Initialize the Flask application and file paths
@@ -53,14 +56,22 @@ model = model_bundle["model"]
 feature_columns = model_bundle["feature_columns"]
 
 
+
+
 # ============================================================
-# Step 3: Process new traffic records
+# Step 3: Process new traffic records and send Telegram alerts
 # ============================================================
 
 def process_new_records():
 
     # Open the SQLite database with write access.
     connection = sqlite3.connect(DATABASE_PATH, timeout=10)
+
+    # Store newly detected anomalies for Telegram notifications.
+    new_alerts = []
+
+    # Count successfully inserted detection records.
+    processed_count = 0
 
     try:
         # Create a cursor for executing SQL statements.
@@ -103,11 +114,11 @@ def process_new_records():
         # Retrieve all records that need to be analyzed.
         records = cursor.fetchall()
 
-        # Stop if there are no new records to process.
+        # Stop if there are no new records.
         if not records:
             return 0
 
-        # Convert the retrieved records into a pandas DataFrame.
+        # Convert the records into a pandas DataFrame.
         df = pd.DataFrame(
             records,
             columns=[
@@ -124,49 +135,77 @@ def process_new_records():
             ]
         )
 
-        # Select the numerical features in the exact training order.
+        # Select numerical features in the original training order.
         X = df[feature_columns]
 
-        # Generate predictions for all unprocessed traffic records.
+        # Generate predictions using the Isolation Forest model.
         predictions = model.predict(X)
 
-        # Calculate anomaly scores for all analyzed records.
+        # Calculate anomaly scores.
         anomaly_scores = model.decision_function(X)
 
-        # Prepare the prediction results for database insertion.
-        detection_records = []
-
-        # Match each prediction and score with its original traffic record.
+        # Process each traffic record individually.
         for index, record in df.iterrows():
 
-            # Store the timestamp, device IP, prediction, and anomaly score.
-            detection_records.append((
+            # Retrieve the prediction and anomaly score.
+            prediction = int(predictions[index])
+            anomaly_score = float(anomaly_scores[index])
+
+            # Insert the prediction into the database.
+            cursor.execute("""
+                INSERT OR IGNORE INTO anomaly_detections (
+                    minute,
+                    device_ip,
+                    prediction,
+                    anomaly_score
+                )
+                VALUES (?, ?, ?, ?)
+            """, (
                 record["minute"],
                 record["device_ip"],
-                int(predictions[index]),
-                float(anomaly_scores[index])
-            ))
-
-        # Insert predictions without creating duplicate records.
-        cursor.executemany("""
-            INSERT OR IGNORE INTO anomaly_detections (
-                minute,
-                device_ip,
                 prediction,
                 anomaly_score
-            )
-            VALUES (?, ?, ?, ?)
-        """, detection_records)
+            ))
 
-        # Commit the inserted predictions to the database.
+            # Check whether a new database record was inserted.
+            if cursor.rowcount == 1:
+
+                # Increase the successfully processed record count.
+                processed_count += 1
+
+                # Only collect newly inserted potential anomalies.
+                if prediction == -1:
+
+                    new_alerts.append({
+                        "minute": record["minute"],
+                        "device_ip": record["device_ip"],
+                        "packet_count": int(record["packet_count"]),
+                        "total_bytes": int(record["total_bytes"]),
+                        "anomaly_score": anomaly_score
+                    })
+
+        # Save all detection records before contacting Telegram.
         connection.commit()
-
-        # Return the number of records that were processed.
-        return len(detection_records)
 
     finally:
         # Close the database connection.
         connection.close()
+
+    # Send notifications after the database transaction is complete.
+    for alert in new_alerts:
+
+        send_telegram_alert(
+            minute=alert["minute"],
+            device_ip=alert["device_ip"],
+            packet_count=alert["packet_count"],
+            total_bytes=alert["total_bytes"],
+            anomaly_score=alert["anomaly_score"]
+        )
+
+    # Return the number of newly inserted detection records.
+    return processed_count
+
+
 
 
 # ============================================================
